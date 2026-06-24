@@ -1,5 +1,14 @@
 import streamlit as st
 import pickle
+import os
+import subprocess
+
+# -----------------------------
+# GENERATE MODEL FILES IF NEEDED
+# -----------------------------
+if not os.path.exists("movies.pkl") or not os.path.exists("similarity.pkl"):
+    with st.spinner("Building recommendation model for first launch..."):
+        subprocess.run(["python", "model.py"])
 
 # -----------------------------
 # PAGE CONFIG
@@ -19,21 +28,15 @@ st.markdown("""
     max-width: 1200px;
 }
 
-.movie-card {
+h1 {
+    text-align: center;
+}
+
+.movie-box {
+    border: 1px solid #444;
     padding: 15px;
     border-radius: 10px;
-    border: 1px solid #444;
     margin-bottom: 15px;
-}
-
-.genre {
-    color: #8ecae6;
-    font-weight: bold;
-}
-
-.score {
-    color: #90ee90;
-    font-weight: bold;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -45,7 +48,7 @@ movies = pickle.load(open("movies.pkl", "rb"))
 similarity = pickle.load(open("similarity.pkl", "rb"))
 
 # -----------------------------
-# RECOMMEND FUNCTION
+# RECOMMENDATION FUNCTION
 # -----------------------------
 def recommend(movie_name, n=5):
 
@@ -79,9 +82,9 @@ def recommend(movie_name, n=5):
 # -----------------------------
 st.title("🎬 Movie Recommendation System")
 
-st.markdown("""
-Discover similar movies using Machine Learning and Content-Based Filtering.
-""")
+st.write(
+    "Discover similar movies using Machine Learning and Content-Based Filtering."
+)
 
 # -----------------------------
 # SIDEBAR
@@ -101,12 +104,33 @@ show_scores = st.sidebar.checkbox(
 )
 
 # -----------------------------
-# MOVIE SELECTION
+# MOVIE SELECTOR
 # -----------------------------
 selected_movie = st.selectbox(
     "🔍 Search or Select a Movie",
     movies["title"].values
 )
+
+# -----------------------------
+# SHOW SELECTED MOVIE DETAILS
+# -----------------------------
+selected_data = movies[movies["title"] == selected_movie].iloc[0]
+
+st.markdown("---")
+
+st.subheader("Selected Movie")
+
+st.markdown(f"### 🎬 {selected_data['title']}")
+st.write(f"🎭 {selected_data['genres_text']}")
+
+overview = selected_data["overview"]
+
+if len(overview) > 300:
+    overview = overview[:300] + "..."
+
+st.write(overview)
+
+st.markdown("---")
 
 # -----------------------------
 # RECOMMEND BUTTON
@@ -118,28 +142,23 @@ if st.button("🎥 Get Recommendations"):
         num_recommendations
     )
 
-    st.subheader("🎬 Recommended Movies")
+    st.subheader("Recommended Movies")
 
     for movie in recommendations:
 
         with st.container(border=True):
 
-            st.markdown(
-                f"### 🎬 {movie['title']}"
-            )
+            st.markdown(f"### 🎬 {movie['title']}")
 
-            st.markdown(
-                f"**🎭 Genres:** {movie['genres']}"
-            )
+            st.write(f"🎭 {movie['genres']}")
 
             if show_scores:
-
                 st.progress(
                     min(movie["score"] / 100, 1.0)
                 )
 
-                st.markdown(
-                    f"**⭐ Similarity Score:** {movie['score']}%"
+                st.write(
+                    f"⭐ Similarity Score: {movie['score']}%"
                 )
 
             overview = movie["overview"]
@@ -153,7 +172,6 @@ if st.button("🎥 Get Recommendations"):
 # FOOTER
 # -----------------------------
 st.sidebar.markdown("---")
-
 st.sidebar.success(
-    "Built using Python, Streamlit, Scikit-Learn and Cosine Similarity."
+    "Built using Python, Streamlit, Pandas and Scikit-Learn."
 )
